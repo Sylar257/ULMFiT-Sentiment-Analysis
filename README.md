@@ -1,6 +1,6 @@
 # ULMFiT practical projects
 
-In this repo, we will be reading and understanding two papers in details: the [Universal Language Model Fine_tuning for Text Classification](https://arxiv.org/abs/1801.06146) paper and the [AWD-LSTM paper](https://arxiv.org/pdf/1708.02182.pdf) . Comparing ULMFiT to other models that are popularly applied in similar tasks such as language modeling and sentiment classification.
+In this repo, we will be reading and understanding two papers in details: the [Universal Language Model Fine_tuning for Text Classification](https://arxiv.org/abs/1801.06146) paper and the [AWD-LSTM paper](https://arxiv.org/pdf/1708.02182.pdf) . Comparing **ULMFiT** to other models that are popularly applied in similar tasks such as language modeling and sentiment classification.
 
 You will find three parts of contents in this repo:
 
@@ -8,7 +8,7 @@ You will find three parts of contents in this repo:
 *   practical application of ULMFiT on IMDB sentiment classification
 *   what if we are interested in modeling a language that is not English?
 
-Acknowledgement: Sincere thanks to Jeremy Howard, Sebastian Ruder and Rachel Thomas not just because they wrote the ULMFiT [paper](https://arxiv.org/abs/1801.06146), but more amazingly, for having developed the [FastAI NLP course](https://www.youtube.com/watch?v=cce8ntxP_XI&list=PLtmWHNX-gukKocXQOkQjuVxglSDYWsSh9) that provides users with interactive tutorials of implementation and practical advices.
+Acknowledgement: Sincere thanks to Jeremy Howard, Sebastian Ruder and Rachel Thomas not just because that they wrote the ULMFiT [paper](https://arxiv.org/abs/1801.06146), but more amazingly, for having developed the [FastAI NLP course](https://www.youtube.com/watch?v=cce8ntxP_XI&list=PLtmWHNX-gukKocXQOkQjuVxglSDYWsSh9) that provides users with interactive tutorials of implementation and practical advices.
 
 ## Overview of critical techniques from papers
 
