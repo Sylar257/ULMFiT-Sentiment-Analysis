@@ -163,3 +163,88 @@ In this notebook, we will be using the same base architecture as the [original p
 
 #### Step III: training  the language model
 
+In `FastAI` we have a neat function to help us finding a sensible **learning_rate**. (isn't this fantastic?)
+
+```python
+learn_lm.lr_find()
+# Trim the last 15 datapoints so that we have clearer view
+learn_lm.recorder.plot(skip_end=15)
+```
+
+![lr_find](images/lr_find.png)
+
+Then train the model with `learn_lm.freeze()` and train again with `learn_lm.unfreeze()`:
+
+```python
+# We want to select a learning_rate where the slope is steep and not going upwards.
+# seems to be a sensible choice
+
+lr=5e-3
+learn_lm.to_fp16()
+learn_lm.fit_one_cycle(5, lr, moms=(0.8,0.7))
+
+# unfreeze and train again
+learn_lm.unfreeze()
+learn_lm.fit_one_cycle(10,lr/5, moms=(0.8, 0.7))
+```
+
+The accuracy reflect *how well the learner could get the absolute correct next word give previous words*:
+
+![lm_training](images/lm_training.png)
+
+#### Step IV: Create the classification model
+
+Now our language model is more **IMDB like**. We will proceed to train the **classifier** which is actually what we are about. Again, we will be creating a `Databunch` object , where this time, we are `.split_by_folder()` and  `.label_from_folder()` :
+
+```python
+bs = 48
+data_clas = (TextList.from_folder(path, vocab=data_lm.vocab)
+             #grab all the text files in path
+             .split_by_folder(valid='test')
+             #split by train and valid folder (that only keeps 'train' and 'test' so no need to filter)
+             .label_from_folder(classes=['neg', 'pos'])
+             #label them all with their folders
+             .databunch(bs=bs, num_workers=1))
+```
+
+Of course, we will not be training from scratch this time. So the obvious thing to do here is to load the previously trained **encoder** when creating our `Learner` object:
+
+```python
+learn_clas = text_classifier_learner(data_clas, AWD_LSTM, drop_mult=0.3)
+learn_clas.load_encoder('fine_tuned_lm_enc')
+learn_clas.freeze()
+```
+
+#### Step V: final training
+
+The training process is similar to that of *language model* previously. In addition, we will be performing **gradual unfreezing during fine-tuning our classifier**.
+
+Fine-tuning the target classifier is the most critical part of the *transfer learning method*. Overly aggressive fine-tuning will cause catastrophic forgetting, eliminating the benefit of the information captured through language modeling; too cautious fine-tuning will lead to slow convergence (and resultant overfiting). Besides discriminative fine-tuning and triangular learning rates, **gradual unfreezing** is proposed.
+
+Jeremy et al. found that for RNN-base NLP models, by gradually unfreeze the layers from head to bottom we minimize the forgetting incurred for each *transfer learning* thus maximize our effort done in the previous training section.
+
+We first unfreeze the **last layer** and fine-tune all un-frozen layers for one epoch.
+
+Then unfreeze the **next lower frozen layer** and repeat.
+
+Until all unfrozen layers converges.
+
+```python
+# freezed training
+learn_cla.freeze()
+learn_clas.fit_one_cycle(10, 2e-2, moms=(0.8, 0.7))
+
+# gradually unfreeze another layer
+learn_clas.freeze_to(-2)
+learn_clas.fit_one_cycle(5, slice(1e-2/(2.6**4),1e-2), moms=(0.8, 0.7))
+
+# gradually unfreeze another layer
+learn_clas.freeze_to(-3)
+learn_clas.fit_one_cycle(5, slice(5e-3/(2.6**4), 5e-3), moms=(0.8, 0.7))
+
+# gradually unfreeze another layer
+learn_clas.unfreeze()
+learn_clas.fit_one_cycle(15, slice(4e-4/(2.6**4),5e-4), moms=(0.8,0.7))
+```
+
+The state-of-the-art result for IMDB sentimant classification result in 2017 is **94.1%** What we can do even better, is to build a **reversed model** as well and training a meta-learner on top of that. For this technique, we will be experimenting with more detail in my [sentiment analysis with non-English language](https://render.githubusercontent.com/view/ipynb?commit=49bdb9d4574791a4021617c3499d9290eb18f9a4&enc_url=68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f53796c61723235372f554c4d4669542d53656e74696d656e742d416e616c797369732f343962646239643435373437393161343032313631376333343939643932393065623138663961342f554c4d466954253230426173696373253230616e64253230696d706c656d656e746174696f6e2532306f6e253230494d446225323073656e74696d656e74253230616e616c797369732e6970796e62&nwo=Sylar257%2FULMFiT-Sentiment-Analysis&path=ULMFiT+Basics+and+implementation+on+IMDb+sentiment+analysis.ipynb&repository_id=225531938&repository_type=Repository) repo.
