@@ -10,6 +10,8 @@ You will find three parts of contents in this repo:
 
 Acknowledgement: Sincere thanks to Jeremy Howard, Sebastian Ruder and Rachel Thomas not just because that they wrote the ULMFiT [paper](https://arxiv.org/abs/1801.06146), but more amazingly, for having developed the [FastAI NLP course](https://www.youtube.com/watch?v=cce8ntxP_XI&list=PLtmWHNX-gukKocXQOkQjuVxglSDYWsSh9) that provides users with interactive tutorials of implementation and practical advices.
 
+![ULMFiT](images/ULMFiT.jpg)
+
 ## Overview of critical techniques from papers
 
 ### ULMFiT
@@ -116,3 +118,48 @@ The details about mixed precision training can be found in [NVIDIA’s documenta
 The following is the recommended model architecture recommended by NVIDIA for best GPU effciency:
 
 ![NVIDIA_recommendation](images/NVIDIA_recommendation.png)
+
+
+
+
+
+## Implementation of ULMFiT with FastAI
+
+### Step I: construct our dataset
+
+In `fastai` we use the notion of `databunch` which is essentially PyTorch `dataset` paired with a `dataloader` with its corresponding *transformations*.
+
+```python
+# we will use the IMDb dataset from FastAI repo
+path = untar_data(URLs.IMDB) # this give us the directory to construct labeled text list
+
+bs = 48
+data_lm = (TextList.from_folder(path)                        # other options are also available such as `from_csv`
+          .filter_by_folder(includ=['train','test','unsup']) # exclude other folders
+          .split_by_rand_pct(0.1, seed=48)					 # randomly split 10-90
+          .label_for_lm()									 # label as to predict the next word token
+          .databunch(bs=bs))								 # convert to databunch for the learner later
+
+# Now if we call `show_batch()`
+data_lm.show_batch()
+```
+
+This give us the following show batch:
+
+![show_batch](images/show_batch.png)
+
+#### Step II: create a `Learner`
+
+The `Learner` concept in `FastAI` is an object that contains the `databunch` we just created as well as the **model architecture** and the **optimizer** we are going to use later. The amazing part is this could be done in just one line:
+
+```python
+# the drop_mult decide the percentage of dropout to use in relation to the combination used in the original paper
+learn_lm = language_model_learner(data_lm, AWD_LSTM, drop_mult=0.3)
+```
+
+In this notebook, we will be using the same base architecture as the [original paper](https://arxiv.org/pdf/1801.06146.pdf): AWD_LSTM. We will be sure to explore more advanced base architectures with ULMFiT approach in my later posts, so don't miss out. Now let's take a good at this simple 3 layer structure:
+
+![AWD_LSTM](images/AWD_LSTM.png)
+
+#### Step III: training  the language model
+
