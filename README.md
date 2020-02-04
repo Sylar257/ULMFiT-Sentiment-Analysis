@@ -231,7 +231,7 @@ Until all unfrozen layers converges.
 
 ```python
 # freezed training
-learn_cla.freeze()
+learn_clas.freeze()
 learn_clas.fit_one_cycle(10, 2e-2, moms=(0.8, 0.7))
 
 # gradually unfreeze another layer
